@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Japanese Stage 6: The World of Work</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap');
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #f0fdf4; /* Light green background */
+            background-image: radial-gradient(#dcfce7 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Animations for feedback */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            50% { transform: translateX(5px); }
+            75% { transform: translateX(-5px); }
+        }
+        .animate-shake {
+            animation: shake 0.4s ease-in-out;
+        }
+
+        @keyframes pulse-green {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            50% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        .animate-correct {
+            animation: pulse-green 0.5s ease-in-out;
+            background-color: #22c55e !important;
+            color: white !important;
+            border-color: #16a34a !important;
+        }
+
+        /* Builder block transitions */
+        .block-item {
+            transition: all 0.2s ease;
+        }
+        .block-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        
+        .matched-item {
+            opacity: 0.6;
+            pointer-events: none;
+            background-color: #d1d5db !important;
+            border-color: #9ca3af !important;
+            color: #4b5563 !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- Main Game Container -->
+    <div class="max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-green-200">
+        
+        <!-- Header -->
+        <div class="bg-green-600 text-white p-4 text-center relative">
+            <h1 class="text-2xl md:text-3xl font-bold">The World of Work (仕事の世界)</h1>
+            <p class="text-green-100 text-sm mt-1">Vocabulary & Grammar Mastery</p>
+            
+            <!-- Progress Bar -->
+            <div id="progress-container" class="hidden mt-4 bg-green-800 rounded-full h-2.5 w-full max-w-md mx-auto">
+                <div id="progress-bar" class="bg-green-300 h-2.5 rounded-full" style="width: 0%"></div>
+            </div>
+            <div id="stage-indicator" class="hidden absolute top-4 right-4 bg-green-500 text-xs px-2 py-1 rounded-full font-bold shadow-sm">
+                Round 1/11
+            </div>
+        </div>
+
+        <!-- Screens Content -->
+        <div class="p-6 md:p-8 min-h-[400px] flex flex-col justify-center">
+            
+            <!-- 1. WELCOME SCREEN -->
+            <div id="screen-welcome" class="text-center space-y-6">
+                <div class="text-6xl mb-4">💼 ✨ 🎓</div>
+                <h2 class="text-2xl font-bold text-gray-800">Welcome to your future career!</h2>
+                <p class="text-gray-600 max-w-lg mx-auto">
+                    Prepare for the world of work by mastering essential vocabulary and learning how to express your intentions (つもりです), purposes (ために), and desires (たいです).
+                </p>
+                <div class="bg-green-50 p-4 rounded-lg text-sm text-left max-w-lg mx-auto border border-green-100">
+                    <p class="font-bold text-green-800 mb-2">How to play the 6 Stages:</p>
+                    <ul class="list-disc list-inside text-gray-700 space-y-2">
+                        <li><strong>Stage 1 (Vocabulary):</strong> 3 rounds of matching (Hiragana to English, 3-column Kanji matching, and Emoji contexts).</li>
+                        <li><strong>Stage 2 (Guided Chunking):</strong> Translate English to Japanese by assembling sentence chunks.</li>
+                        <li><strong>Stage 3 (Reverse Translation):</strong> Translate Japanese sentences back into English.</li>
+                        <li><strong>Stage 4 (Independent Application):</strong> Build Japanese sentences word-by-word (watch out for distractors!).</li>
+                        <li><strong>Stage 5 (Advanced Reverse):</strong> Translate complex Japanese sentences containing intentions back into English.</li>
+                        <li><strong>Stage 6 (Reading Comprehension):</strong> Read an interview transcript and answer multiple-choice questions.</li>
+                    </ul>
+                </div>
+                <button onclick="startGame()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105 text-lg">
+                    Start Learning! (はじめましょう)
+                </button>
+            </div>
+
+            <!-- 2. MATCHING SCREEN (Stages 1 & 2) -->
+            <div id="screen-matching" class="hidden flex-col items-center w-full">
+                <h2 id="match-title" class="text-xl font-bold text-gray-800 mb-2">Stage 1: Match the Vocabulary</h2>
+                <p id="match-instruction" class="text-gray-500 mb-6 text-sm">Click an item on the left, then click its match on the right.</p>
+                
+                <div class="flex flex-col md:flex-row gap-8 w-full justify-center">
+                    <!-- Left Column (English/Emoji) -->
+                    <div id="match-col-left" class="flex flex-col gap-3 w-full md:w-1/2"></div>
+                    <!-- Right Column (Japanese) -->
+                    <div id="match-col-right" class="flex flex-col gap-3 w-full md:w-1/2"></div>
+                </div>
+
+                <div id="match-feedback" class="mt-6 text-lg font-bold h-8 transition-all"></div>
+                <button id="btn-next-match" onclick="nextLevel()" class="hidden mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-full shadow transition">
+                    Next Round (次へ) ➔
+                </button>
+            </div>
+
+            <!-- 2.5 MATCHING 3-COLUMN SCREEN -->
+            <div id="screen-matching-3" class="hidden flex-col items-center w-full">
+                <h2 id="match3-title" class="text-xl font-bold text-gray-800 mb-2">Stage 1: Match 3 Columns</h2>
+                <p id="match3-instruction" class="text-gray-500 mb-6 text-sm">Select one item from each column to form a matching trio.</p>
+                
+                <div class="flex flex-col md:flex-row gap-4 w-full justify-center">
+                    <div id="match3-col1" class="flex flex-col gap-3 w-full md:w-1/3"></div>
+                    <div id="match3-col2" class="flex flex-col gap-3 w-full md:w-1/3"></div>
+                    <div id="match3-col3" class="flex flex-col gap-3 w-full md:w-1/3"></div>
+                </div>
+
+                <div id="match3-feedback" class="mt-6 text-lg font-bold h-8 transition-all text-center"></div>
+                <button id="btn-next-match3" onclick="nextLevel()" class="hidden mt-4 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-full shadow transition">
+                    Next Round (次へ) ➔
+                </button>
+            </div>
+
+            <!-- 3. BUILDER SCREEN (Stages 3, 4, 5) -->
+            <div id="screen-builder" class="hidden flex-col items-center w-full">
+                <h2 id="builder-title" class="text-xl font-bold text-gray-800 mb-1">Stage 3: Guided Chunking</h2>
+                <p id="builder-instruction" class="text-gray-500 mb-6 text-sm">Click the blocks below to build the translation.</p>
+                
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 w-full text-center shadow-sm">
+                    <p class="text-xs text-blue-500 font-bold uppercase tracking-wider mb-1">Translate this:</p>
+                    <p id="builder-prompt" class="text-xl font-medium text-gray-800">In order to save money, I do a part-time job.</p>
+                </div>
+
+                <!-- Drop Zone -->
+                <div class="w-full bg-gray-100 border-2 border-dashed border-gray-300 rounded-xl p-4 min-h-[80px] flex flex-wrap gap-2 items-center justify-center mb-6" id="builder-dropzone">
+                    <!-- Selected blocks go here -->
+                </div>
+
+                <!-- Options Zone -->
+                <div id="builder-options" class="flex flex-wrap gap-3 justify-center mb-6">
+                    <!-- Available blocks go here -->
+                </div>
+
+                <div class="flex gap-4 items-center">
+                    <button id="btn-check-builder" onclick="checkBuilderAnswer()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-8 rounded-full shadow transition">
+                        Check Answer (チェック)
+                    </button>
+                    <button id="btn-next-builder" onclick="nextLevel()" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-8 rounded-full shadow transition">
+                        Next Round (次へ) ➔
+                    </button>
+                </div>
+                <div id="builder-feedback" class="mt-4 text-lg font-bold h-8 transition-all text-center"></div>
+            </div>
+
+            <!-- 3.5 READING COMPREHENSION SCREEN -->
+            <div id="screen-reading" class="hidden flex-col w-full">
+                <h2 id="reading-title" class="text-xl font-bold text-gray-800 mb-2 text-center">Stage 4: Reading Comprehension</h2>
+                <p id="reading-instruction" class="text-gray-500 mb-6 text-sm text-center">Read the interview and answer the questions below.</p>
+                
+                <!-- Reading Text -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6 w-full shadow-sm">
+                    <p class="text-xs text-blue-500 font-bold uppercase tracking-wider mb-4 border-b border-blue-200 pb-2">Interview Transcript (面接)</p>
+                    <div id="reading-text" class="text-gray-800 leading-relaxed space-y-4">
+                        <!-- Transcript injected here -->
+                    </div>
+                </div>
+
+                <!-- Multiple Choice Questions -->
+                <div id="reading-questions-container" class="space-y-6 w-full">
+                    <!-- Questions injected here -->
+                </div>
+
+                <div class="flex flex-col items-center mt-6">
+                    <button id="btn-check-reading" onclick="checkReadingAnswers()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-8 rounded-full shadow transition">
+                        Check Answers (チェック)
+                    </button>
+                    <button id="btn-next-reading" onclick="nextLevel()" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-8 rounded-full shadow transition">
+                        Finish Game (終了) ➔
+                    </button>
+                    <div id="reading-feedback" class="mt-4 text-lg font-bold h-8 transition-all text-center"></div>
+                </div>
+            </div>
+
+            <!-- 3.75 STAGE RESULTS SCREEN -->
+            <div id="screen-stage-results" class="hidden text-center space-y-6">
+                <div class="text-5xl mb-4">🌟 ✨ 📈</div>
+                <h2 id="stage-result-title" class="text-3xl font-bold text-gray-800">Stage Complete!</h2>
+                <p class="text-gray-600 max-w-lg mx-auto text-lg">
+                    Great job! You have successfully completed this stage. Take a breath and get ready for the next challenge. (よくできました！)
+                </p>
+                <br>
+                <button onclick="loadLevel()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full shadow-lg transition transform hover:scale-105 text-lg">
+                    Continue to Next Stage (次へ) ➔
+                </button>
+            </div>
+
+            <!-- 4. END SCREEN -->
+            <div id="screen-end" class="hidden text-center space-y-6">
+                <div class="text-6xl mb-4">🎉 🏆 👏</div>
+                <h2 class="text-3xl font-bold text-gray-800">Congratulations! (おめでとうございます)</h2>
+                <p class="text-gray-600 max-w-lg mx-auto text-lg">
+                    You have successfully mastered the vocabulary for the world of work and demonstrated excellent application of <span class="font-bold">～つもりです</span>, <span class="font-bold">～ために</span>, and <span class="font-bold">～たいです</span>!
+                </p>
+                <div class="p-6 bg-green-100 rounded-xl inline-block shadow-inner mb-6">
+                    <p class="text-green-800 font-bold">Your Future is Bright!</p>
+                    <p class="text-3xl font-bold text-green-600 mt-2">100%</p>
+                </div>
+                <br>
+                <button onclick="location.reload()" class="bg-gray-800 hover:bg-gray-900 text-white font-bold py-3 px-8 rounded-full shadow-lg transition">
+                    Play Again (もう一度)
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Game Logic -->
+    <script>
+        // --- GAME DATA ---
+        // This array holds the configuration for each stage, fulfilling the Gradual Release of Responsibility.
+        const gameLevels = [
+            // STAGE 1, Round 1: Hiragana to English
+            {
+                type: "matching",
+                title: "Stage 1 (Round 1/3): Hiragana to English",
+                instruction: "Match the hiragana of the vocabulary words with their English definitions.",
+                pairs: [
+                    { id: 1, left: "はたらく", right: "To work" },
+                    { id: 2, left: "めんせつ", right: "Interview" },
+                    { id: 3, left: "けいけん", right: "Experience" },
+                    { id: 4, left: "おかね", right: "Money" },
+                    { id: 5, left: "べんごし", right: "Lawyer" },
+                    { id: 6, left: "いしゃ", right: "Doctor" }
+                ]
+            },
+            // STAGE 1, Round 2: 3-column matching
+            {
+                type: "matching3",
+                title: "Stage 1 (Round 2/3): Kanji, Hiragana & English",
+                instruction: "Select the matching Kanji, Hiragana, and English meaning to form a trio.",
+                trios: [
+                    { id: 1, col1: "将来", col2: "しょうらい", col3: "Future" },
+                    { id: 2, col1: "働く", col2: "はたらく", col3: "To work" },
+                    { id: 3, col1: "面接", col2: "めんせつ", col3: "Interview" },
+                    { id: 4, col1: "経験", col2: "けいけん", col3: "Experience" },
+                    { id: 5, col1: "お金", col2: "おかね", col3: "Money" }
+                ]
+            },
+            // STAGE 1, Round 3: Vocab to Emoji
+            {
+                type: "matching",
+                title: "Stage 1 (Round 3/3): Vocabulary to Emoji",
+                instruction: "Match the vocabulary words with their corresponding emojis.",
+                pairs: [
+                    { id: 1, left: "きょうし", right: "👨‍🏫 Teacher" },
+                    { id: 2, left: "お金", right: "💵 Cash" },
+                    { id: 3, left: "かんごし", right: "🩺 Nurse" },
+                    { id: 4, left: "アルバイト", right: "🏪 Part-time" },
+                    { id: 5, left: "面接", right: "🤝 Handshake" }
+                ]
+            },
+            // STAGE 2, Round 1 (Eng -> Jap)
+            {
+                type: "builder",
+                title: "Stage 2 (Round 1/2): English to Japanese (ために)",
+                instruction: "Translate into Japanese by clicking the chunks.",
+                prompt: "In order to save money, I do a part-time job.",
+                correctAnswer: ["お金を", "ためる", "ために、", "アルバイトを", "します。"],
+                options: ["アルバイトを", "ために、", "お金を", "します。", "ためる"]
+            },
+            // STAGE 2, Round 2 (Eng -> Jap)
+            {
+                type: "builder",
+                title: "Stage 2 (Round 2/2): English to Japanese (たいです)",
+                instruction: "Translate into Japanese word by word.",
+                prompt: "In the future, I want to work in Japan.",
+                correctAnswer: ["将来", "、", "日本", "で", "働き", "たい", "です", "。"],
+                options: ["たい", "日本", "将来", "です", "、", "で", "働き", "。"]
+            },
+            // STAGE 3, Round 1 (Jap -> Eng)
+            {
+                type: "builder",
+                title: "Stage 3 (Round 1/2): Japanese to English",
+                instruction: "Translate into English by clicking the chunks.",
+                prompt: "お金をためるために、アルバイトをします。",
+                correctAnswer: ["In order to ", "save money, ", "I do a ", "part-time job."],
+                options: ["save money, ", "part-time job.", "In order to ", "I do a "]
+            },
+            // STAGE 3, Round 2 (Jap -> Eng)
+            {
+                type: "builder",
+                title: "Stage 3 (Round 2/2): Japanese to English",
+                instruction: "Translate into English by clicking the chunks.",
+                prompt: "将来、日本で働きたいです。",
+                correctAnswer: ["In the future, ", "I want to ", "work ", "in Japan."],
+                options: ["In the future, ", "in Japan.", "work ", "I want to "]
+            },
+            // STAGE 4, Round 1 (Eng -> Jap)
+            {
+                type: "builder",
+                title: "Stage 4 (Round 1/2): English to Japanese (つもりです)",
+                instruction: "Translate into Japanese. Watch out for distractors!",
+                prompt: "Tomorrow, I intend to go to the interview.",
+                correctAnswer: ["明日", "、", "面接", "に", "行く", "つもり", "です", "。"],
+                options: ["面接", "行く", "つもり", "明日", "。", "です", "に", "、", "たい", "を"]
+            },
+            // STAGE 4, Round 2 (Eng -> Jap)
+            {
+                type: "builder",
+                title: "Stage 4 (Round 2/2): Mixed Grammar English to Japanese",
+                instruction: "Translate into Japanese. Watch out for distractors!",
+                prompt: "For the sake of experience, I want to do volunteer work.",
+                correctAnswer: ["経験", "の", "ため", "に", "、", "ボランティア", "を", "し", "たい", "です", "。"],
+                options: ["し", "ボランティア", "経験", "ため", "です", "に", "、", "を", "たい", "の", "。", "つもり", "が"]
+            },
+            // STAGE 5, Round 1 (Jap -> Eng)
+            {
+                type: "builder",
+                title: "Stage 5 (Round 1/2): Japanese to English",
+                instruction: "Translate into English by clicking the chunks.",
+                prompt: "明日、面接に行くつもりです。",
+                correctAnswer: ["Tomorrow, ", "I intend to ", "go to ", "the interview."],
+                options: ["Tomorrow, ", "the interview.", "I intend to ", "go to "]
+            },
+            // STAGE 5, Round 2 (Jap -> Eng)
+            {
+                type: "builder",
+                title: "Stage 5 (Round 2/2): Japanese to English",
+                instruction: "Translate into English by clicking the chunks.",
+                prompt: "経験のために、ボランティアをしたいです。",
+                correctAnswer: ["For the sake of ", "experience, ", "I want to do ", "volunteer work."],
+                options: ["I want to do ", "For the sake of ", "volunteer work.", "experience, "]
+            },
+            // STAGE 6: Reading Comprehension
+            {
+                type: "reading",
+                title: "Stage 6: Reading Comprehension",
+                instruction: "Read the interview between the teacher and Ken, then answer the questions.",
+                transcript: [
+                    { speaker: "先生", text: "ケンさん、将来の仕事について教えてください。どんな仕事をしたいですか。" },
+                    { speaker: "ケン", text: "私は将来、べんごしになりたいです。" },
+                    { speaker: "先生", text: "そうですか。どうしてべんごしになりたいですか。" },
+                    { speaker: "ケン", text: "人を助けるために、法律（ほうりつ - law）を勉強したいです。だから、大学に行くつもりです。" },
+                    { speaker: "先生", text: "素晴らしいですね。今は何かアルバイトをしていますか。" },
+                    { speaker: "ケン", text: "はい、週末にスーパーで働いています。大学の学費（がくひ - tuition）のお金をためるために、アルバイトをしています。" },
+                    { speaker: "先生", text: "いい経験ですね。頑張ってください。" }
+                ],
+                questions: [
+                    {
+                        id: "q1",
+                        question: "1. What does Ken want to be in the future?",
+                        options: ["A Doctor", "A Lawyer", "A Teacher", "A Nurse"],
+                        correctAnswer: 1 // Index of correct option ("A Lawyer")
+                    },
+                    {
+                        id: "q2",
+                        question: "2. Why does Ken intend to go to university?",
+                        options: ["To make a lot of money", "To get experience working in a supermarket", "To study law in order to help people", "To learn how to become a teacher"],
+                        correctAnswer: 2 // Index of correct option ("To study law in order to help people")
+                    },
+                    {
+                        id: "q3",
+                        question: "3. What is Ken's purpose for working part-time on weekends?",
+                        options: ["To save money for university tuition", "To get experience for his future career", "To help people at the supermarket", "To prepare for an interview"],
+                        correctAnswer: 0 // Index of correct option ("To save money for university tuition")
+                    }
+                ]
+            }
+        ];
+
+        // --- STATE VARIABLES ---
+        let currentLevelIndex = 0;
+        
+        // Matching State
+        let selectedLeftId = null;
+        let selectedRightId = null;
+        let leftElement = null;
+        let rightElement = null;
+        let matchedCount = 0;
+
+        // 3-Column Matching State
+        let selectedCol1Id = null;
+        let selectedCol2Id = null;
+        let selectedCol3Id = null;
+        let col1Element = null;
+        let col2Element = null;
+        let col3Element = null;
+
+        // Builder State
+        let selectedBlocks = [];
+        let availableBlocks = [];
+
+        // Reading State
+        let readingAnswers = {};
+
+        // --- DOM ELEMENTS ---
+        const screens = {
+            welcome: document.getElementById('screen-welcome'),
+            matching: document.getElementById('screen-matching'),
+            matching3: document.getElementById('screen-matching-3'),
+            builder: document.getElementById('screen-builder'),
+            reading: document.getElementById('screen-reading'),
+            stageResults: document.getElementById('screen-stage-results'),
+            end: document.getElementById('screen-end')
+        };
+        const progressBar = document.getElementById('progress-bar');
+        const progressContainer = document.getElementById('progress-container');
+        const stageIndicator = document.getElementById('stage-indicator');
+
+        // --- CORE LOGIC ---
+
+        function startGame() {
+            screens.welcome.classList.add('hidden');
+            progressContainer.classList.remove('hidden');
+            stageIndicator.classList.remove('hidden');
+            loadLevel();
+        }
+
+        function loadLevel() {
+            if (currentLevelIndex >= gameLevels.length) {
+                showEndScreen();
+                return;
+            }
+
+            // Update Progress UI
+            const progressPercentage = ((currentLevelIndex) / gameLevels.length) * 100;
+            progressBar.style.width = `${progressPercentage}%`;
+            stageIndicator.innerText = `Round ${currentLevelIndex + 1}/${gameLevels.length}`;
+
+            const levelData = gameLevels[currentLevelIndex];
+
+            // Hide all active game screens
+            screens.matching.classList.add('hidden');
+            screens.matching3.classList.add('hidden');
+            screens.builder.classList.add('hidden');
+            screens.reading.classList.add('hidden');
+            screens.stageResults.classList.add('hidden');
+
+            if (levelData.type === "matching") {
+                renderMatchingLevel(levelData);
+            } else if (levelData.type === "matching3") {
+                renderMatching3Level(levelData);
+            } else if (levelData.type === "builder") {
+                renderBuilderLevel(levelData);
+            } else if (levelData.type === "reading") {
+                renderReadingLevel(levelData);
+            }
+        }
+
+        function showStageResultsScreen(completedStage) {
+            screens.matching.classList.add('hidden');
+            screens.matching3.classList.add('hidden');
+            screens.builder.classList.add('hidden');
+            screens.reading.classList.add('hidden');
+            
+            screens.stageResults.classList.remove('hidden');
+            document.getElementById('stage-result-title').innerText = `Stage ${completedStage} Complete!`;
+        }
+
+        function nextLevel() {
+            // Determine current stage number from title (e.g., "Stage 1 (Round...")
+            const currentStageMatch = gameLevels[currentLevelIndex].title.match(/Stage (\d+)/);
+            const currentStage = currentStageMatch ? parseInt(currentStageMatch[1]) : 1;
+
+            currentLevelIndex++;
+            
+            if (currentLevelIndex >= gameLevels.length) {
+                showEndScreen();
+                return;
+            }
+
+            // Determine next stage number
+            const nextStageMatch = gameLevels[currentLevelIndex].title.match(/Stage (\d+)/);
+            const nextStage = nextStageMatch ? parseInt(nextStageMatch[1]) : currentStage;
+
+            // If moving to a new stage, show the intermediate results screen
+            if (currentStage !== nextStage) {
+                showStageResultsScreen(currentStage);
+            } else {
+                loadLevel();
+            }
+        }
+
+        function showEndScreen() {
+            screens.matching.classList.add('hidden');
+            screens.matching3.classList.add('hidden');
+            screens.builder.classList.add('hidden');
+            screens.reading.classList.add('hidden');
+            screens.stageResults.classList.add('hidden');
+            screens.end.classList.remove('hidden');
+            progressBar.style.width = `100%`;
+            stageIndicator.innerText = `Complete!`;
+        }
+
+        // --- MATCHING LOGIC (Stages 1 & 2) ---
+
+        function renderMatchingLevel(data) {
+            screens.matching.classList.remove('hidden');
+            document.getElementById('match-title').innerText = data.title;
+            document.getElementById('match-instruction').innerText = data.instruction;
+            document.getElementById('match-feedback').innerText = "";
+            document.getElementById('match-feedback').className = "mt-6 text-lg font-bold h-8 transition-all";
+            document.getElementById('btn-next-match').classList.add('hidden');
+
+            const colLeft = document.getElementById('match-col-left');
+            const colRight = document.getElementById('match-col-right');
+            colLeft.innerHTML = '';
+            colRight.innerHTML = '';
+
+            // Reset state
+            selectedLeftId = null;
+            selectedRightId = null;
+            leftElement = null;
+            rightElement = null;
+            matchedCount = 0;
+
+            // Shuffle pairs for left and right columns independently
+            const leftItems = shuffleArray([...data.pairs]);
+            const rightItems = shuffleArray([...data.pairs]);
+
+            leftItems.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-left px-4 py-3 bg-white border-2 border-gray-200 rounded-lg font-medium text-gray-700 hover:bg-blue-50 hover:border-blue-300 focus:outline-none transition block-item";
+                btn.innerText = item.left;
+                btn.onclick = () => handleMatchClick(btn, item.id, 'left');
+                colLeft.appendChild(btn);
+            });
+
+            rightItems.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-center px-4 py-3 bg-white border-2 border-gray-200 rounded-lg font-medium text-gray-800 hover:bg-blue-50 hover:border-blue-300 focus:outline-none transition block-item text-lg";
+                btn.innerText = item.right;
+                btn.onclick = () => handleMatchClick(btn, item.id, 'right');
+                colRight.appendChild(btn);
+            });
+        }
+
+        function handleMatchClick(element, id, side) {
+            // Ignore if already matched
+            if (element.classList.contains('matched-item')) return;
+
+            // Deselect previous on the same side
+            if (side === 'left') {
+                if (leftElement) leftElement.classList.remove('border-blue-500', 'bg-blue-100');
+                leftElement = element;
+                selectedLeftId = id;
+            } else {
+                if (rightElement) rightElement.classList.remove('border-blue-500', 'bg-blue-100');
+                rightElement = element;
+                selectedRightId = id;
+            }
+
+            // Highlight selected
+            element.classList.add('border-blue-500', 'bg-blue-100');
+
+            // Check match if both selected
+            if (selectedLeftId !== null && selectedRightId !== null) {
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const feedback = document.getElementById('match-feedback');
+            
+            if (selectedLeftId === selectedRightId) {
+                // Correct Match
+                leftElement.classList.remove('border-blue-500', 'bg-blue-100');
+                rightElement.classList.remove('border-blue-500', 'bg-blue-100');
+                
+                leftElement.classList.add('matched-item', 'animate-correct');
+                rightElement.classList.add('matched-item', 'animate-correct');
+                
+                feedback.innerText = "Correct! (正解)";
+                feedback.className = "mt-6 text-lg font-bold h-8 transition-all text-green-600";
+                
+                matchedCount++;
+                
+                // Reset selection
+                selectedLeftId = null;
+                selectedRightId = null;
+                leftElement = null;
+                rightElement = null;
+
+                // Check win condition
+                if (matchedCount === gameLevels[currentLevelIndex].pairs.length) {
+                    feedback.innerText = "Excellent! All matched.";
+                    document.getElementById('btn-next-match').classList.remove('hidden');
+                }
+            } else {
+                // Incorrect Match
+                leftElement.classList.add('border-red-500', 'bg-red-100', 'animate-shake');
+                rightElement.classList.add('border-red-500', 'bg-red-100', 'animate-shake');
+                
+                feedback.innerText = "Try again! (もう一度)";
+                feedback.className = "mt-6 text-lg font-bold h-8 transition-all text-red-500";
+
+                const tempLeft = leftElement;
+                const tempRight = rightElement;
+
+                setTimeout(() => {
+                    tempLeft.classList.remove('border-red-500', 'bg-red-100', 'animate-shake', 'border-blue-500', 'bg-blue-100');
+                    tempRight.classList.remove('border-red-500', 'bg-red-100', 'animate-shake', 'border-blue-500', 'bg-blue-100');
+                    feedback.innerText = "";
+                }, 800);
+
+                // Reset selection immediately to allow new clicks
+                selectedLeftId = null;
+                selectedRightId = null;
+                leftElement = null;
+                rightElement = null;
+            }
+        }
+
+        // --- 3-COLUMN MATCHING LOGIC ---
+
+        function renderMatching3Level(data) {
+            screens.matching3.classList.remove('hidden');
+            document.getElementById('match3-title').innerText = data.title;
+            document.getElementById('match3-instruction').innerText = data.instruction;
+            document.getElementById('match3-feedback').innerText = "";
+            document.getElementById('match3-feedback').className = "mt-6 text-lg font-bold h-8 transition-all text-center";
+            document.getElementById('btn-next-match3').classList.add('hidden');
+
+            const col1 = document.getElementById('match3-col1');
+            const col2 = document.getElementById('match3-col2');
+            const col3 = document.getElementById('match3-col3');
+            col1.innerHTML = '';
+            col2.innerHTML = '';
+            col3.innerHTML = '';
+
+            selectedCol1Id = null;
+            selectedCol2Id = null;
+            selectedCol3Id = null;
+            col1Element = null;
+            col2Element = null;
+            col3Element = null;
+            matchedCount = 0;
+
+            const items1 = shuffleArray([...data.trios]);
+            const items2 = shuffleArray([...data.trios]);
+            const items3 = shuffleArray([...data.trios]);
+
+            items1.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-center px-2 py-3 bg-white border-2 border-gray-200 rounded-lg font-medium text-gray-800 hover:bg-blue-50 hover:border-blue-300 focus:outline-none transition block-item text-lg";
+                btn.innerText = item.col1;
+                btn.onclick = () => handleMatch3Click(btn, item.id, 1);
+                col1.appendChild(btn);
+            });
+
+            items2.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-center px-2 py-3 bg-white border-2 border-gray-200 rounded-lg font-medium text-gray-800 hover:bg-blue-50 hover:border-blue-300 focus:outline-none transition block-item text-lg";
+                btn.innerText = item.col2;
+                btn.onclick = () => handleMatch3Click(btn, item.id, 2);
+                col2.appendChild(btn);
+            });
+
+            items3.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = "w-full text-center px-2 py-3 bg-white border-2 border-gray-200 rounded-lg font-medium text-gray-800 hover:bg-blue-50 hover:border-blue-300 focus:outline-none transition block-item text-lg";
+                btn.innerText = item.col3;
+                btn.onclick = () => handleMatch3Click(btn, item.id, 3);
+                col3.appendChild(btn);
+            });
+        }
+
+        function handleMatch3Click(element, id, colNum) {
+            if (element.classList.contains('matched-item')) return;
+
+            if (colNum === 1) {
+                if (col1Element) col1Element.classList.remove('border-blue-500', 'bg-blue-100');
+                col1Element = element;
+                selectedCol1Id = id;
+            } else if (colNum === 2) {
+                if (col2Element) col2Element.classList.remove('border-blue-500', 'bg-blue-100');
+                col2Element = element;
+                selectedCol2Id = id;
+            } else {
+                if (col3Element) col3Element.classList.remove('border-blue-500', 'bg-blue-100');
+                col3Element = element;
+                selectedCol3Id = id;
+            }
+
+            element.classList.add('border-blue-500', 'bg-blue-100');
+
+            if (selectedCol1Id !== null && selectedCol2Id !== null && selectedCol3Id !== null) {
+                checkMatch3();
+            }
+        }
+
+        function checkMatch3() {
+            const feedback = document.getElementById('match3-feedback');
+            
+            if (selectedCol1Id === selectedCol2Id && selectedCol2Id === selectedCol3Id) {
+                // Correct Match
+                col1Element.classList.remove('border-blue-500', 'bg-blue-100');
+                col2Element.classList.remove('border-blue-500', 'bg-blue-100');
+                col3Element.classList.remove('border-blue-500', 'bg-blue-100');
+                
+                col1Element.classList.add('matched-item', 'animate-correct');
+                col2Element.classList.add('matched-item', 'animate-correct');
+                col3Element.classList.add('matched-item', 'animate-correct');
+                
+                feedback.innerText = "Correct! (正解)";
+                feedback.className = "mt-6 text-lg font-bold h-8 transition-all text-green-600 text-center";
+                
+                matchedCount++;
+                selectedCol1Id = null; selectedCol2Id = null; selectedCol3Id = null;
+                col1Element = null; col2Element = null; col3Element = null;
+
+                if (matchedCount === gameLevels[currentLevelIndex].trios.length) {
+                    feedback.innerText = "Excellent! All matched.";
+                    document.getElementById('btn-next-match3').classList.remove('hidden');
+                }
+            } else {
+                // Incorrect
+                col1Element.classList.add('border-red-500', 'bg-red-100', 'animate-shake');
+                col2Element.classList.add('border-red-500', 'bg-red-100', 'animate-shake');
+                col3Element.classList.add('border-red-500', 'bg-red-100', 'animate-shake');
+                
+                feedback.innerText = "Try again! (もう一度)";
+                feedback.className = "mt-6 text-lg font-bold h-8 transition-all text-red-500 text-center";
+
+                const t1 = col1Element, t2 = col2Element, t3 = col3Element;
+
+                setTimeout(() => {
+                    t1.classList.remove('border-red-500', 'bg-red-100', 'animate-shake', 'border-blue-500', 'bg-blue-100');
+                    t2.classList.remove('border-red-500', 'bg-red-100', 'animate-shake', 'border-blue-500', 'bg-blue-100');
+                    t3.classList.remove('border-red-500', 'bg-red-100', 'animate-shake', 'border-blue-500', 'bg-blue-100');
+                    feedback.innerText = "";
+                }, 800);
+
+                selectedCol1Id = null; selectedCol2Id = null; selectedCol3Id = null;
+                col1Element = null; col2Element = null; col3Element = null;
+            }
+        }
+
+        // --- BUILDER LOGIC (Stages 3, 4, 5) ---
+
+        function renderBuilderLevel(data) {
+            screens.builder.classList.remove('hidden');
+            document.getElementById('builder-title').innerText = data.title;
+            document.getElementById('builder-instruction').innerText = data.instruction;
+            document.getElementById('builder-prompt').innerText = data.prompt;
+            
+            document.getElementById('btn-check-builder').classList.remove('hidden');
+            document.getElementById('btn-next-builder').classList.add('hidden');
+            document.getElementById('builder-feedback').innerText = "";
+            document.getElementById('builder-feedback').className = "mt-4 text-lg font-bold h-8 transition-all text-center";
+
+            selectedBlocks = [];
+            availableBlocks = [...data.options];
+            availableBlocks = shuffleArray(availableBlocks);
+
+            updateBuilderUI();
+        }
+
+        function updateBuilderUI() {
+            const dropzone = document.getElementById('builder-dropzone');
+            const optionsZone = document.getElementById('builder-options');
+
+            dropzone.innerHTML = '';
+            optionsZone.innerHTML = '';
+
+            // Render selected blocks in the dropzone
+            selectedBlocks.forEach((word, index) => {
+                const btn = createBlockElement(word);
+                btn.classList.add('bg-blue-100', 'border-blue-300', 'text-blue-900');
+                btn.onclick = () => {
+                    // Move back to available
+                    availableBlocks.push(word);
+                    selectedBlocks.splice(index, 1);
+                    updateBuilderUI();
+                };
+                dropzone.appendChild(btn);
+            });
+
+            // If empty, show placeholder text
+            if (selectedBlocks.length === 0) {
+                dropzone.innerHTML = '<span class="text-gray-400 italic">Click words below to build sentence here</span>';
+            }
+
+            // Render available blocks
+            availableBlocks.forEach((word, index) => {
+                const btn = createBlockElement(word);
+                btn.classList.add('bg-white', 'border-gray-300', 'text-gray-800');
+                btn.onclick = () => {
+                    // Move to selected
+                    selectedBlocks.push(word);
+                    availableBlocks.splice(index, 1);
+                    updateBuilderUI();
+                };
+                optionsZone.appendChild(btn);
+            });
+        }
+
+        function createBlockElement(text) {
+            const btn = document.createElement('button');
+            btn.className = "px-4 py-2 border-2 rounded-lg font-medium hover:shadow-md transition block-item text-lg min-w-[3rem]";
+            btn.innerText = text;
+            return btn;
+        }
+
+        function checkBuilderAnswer() {
+            const data = gameLevels[currentLevelIndex];
+            const feedback = document.getElementById('builder-feedback');
+            const dropzone = document.getElementById('builder-dropzone');
+
+            // Join arrays to compare as strings
+            const userString = selectedBlocks.join('');
+            const correctString = data.correctAnswer.join('');
+
+            if (userString === correctString) {
+                // Correct!
+                feedback.innerText = "Perfect! (すばらしい)";
+                feedback.className = "mt-4 text-lg font-bold h-8 transition-all text-center text-green-600";
+                
+                // Animate dropzone blocks
+                const blocks = dropzone.querySelectorAll('button');
+                blocks.forEach(b => {
+                    b.classList.remove('bg-blue-100', 'border-blue-300');
+                    b.classList.add('animate-correct', 'pointer-events-none');
+                });
+
+                // Disable options
+                const options = document.getElementById('builder-options').querySelectorAll('button');
+                options.forEach(b => b.classList.add('matched-item'));
+
+                document.getElementById('btn-check-builder').classList.add('hidden');
+                document.getElementById('btn-next-builder').classList.remove('hidden');
+            } else {
+                // Incorrect
+                feedback.innerText = "Not quite. Check your grammar/particles! (もう一度)";
+                feedback.className = "mt-4 text-lg font-bold h-8 transition-all text-center text-red-500";
+                
+                dropzone.classList.add('animate-shake', 'border-red-400', 'bg-red-50');
+                setTimeout(() => {
+                    dropzone.classList.remove('animate-shake', 'border-red-400', 'bg-red-50');
+                    feedback.innerText = "";
+                }, 1500);
+            }
+        }
+
+        // --- READING COMPREHENSION LOGIC ---
+
+        function renderReadingLevel(data) {
+            screens.reading.classList.remove('hidden');
+            document.getElementById('reading-title').innerText = data.title;
+            document.getElementById('reading-instruction').innerText = data.instruction;
+            
+            document.getElementById('btn-check-reading').classList.remove('hidden');
+            document.getElementById('btn-next-reading').classList.add('hidden');
+            document.getElementById('reading-feedback').innerText = "";
+            document.getElementById('reading-feedback').className = "mt-4 text-lg font-bold h-8 transition-all text-center";
+
+            readingAnswers = {}; // Reset answers
+
+            // Render Transcript
+            const transcriptContainer = document.getElementById('reading-text');
+            transcriptContainer.innerHTML = '';
+            data.transcript.forEach(line => {
+                const p = document.createElement('p');
+                p.innerHTML = `<span class="font-bold ${line.speaker === '先生' ? 'text-indigo-600' : 'text-emerald-600'}">${line.speaker}:</span> ${line.text}`;
+                transcriptContainer.appendChild(p);
+            });
+
+            // Render Questions
+            const questionsContainer = document.getElementById('reading-questions-container');
+            questionsContainer.innerHTML = '';
+            data.questions.forEach((q, qIndex) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = "bg-white border-2 border-gray-200 rounded-lg p-4";
+                questionDiv.id = `q-container-${qIndex}`;
+                
+                const qText = document.createElement('p');
+                qText.className = "font-bold text-gray-800 mb-3";
+                qText.innerText = q.question;
+                questionDiv.appendChild(qText);
+
+                const optionsDiv = document.createElement('div');
+                optionsDiv.className = "space-y-2 pl-2";
+
+                q.options.forEach((optText, optIndex) => {
+                    const label = document.createElement('label');
+                    label.className = "flex items-center space-x-3 cursor-pointer p-2 rounded hover:bg-gray-50 transition";
+                    
+                    const radio = document.createElement('input');
+                    radio.type = "radio";
+                    radio.name = `question-${qIndex}`;
+                    radio.value = optIndex;
+                    radio.className = "form-radio h-5 w-5 text-blue-600 border-gray-300 focus:ring-blue-500";
+                    
+                    radio.onchange = () => {
+                        readingAnswers[qIndex] = optIndex;
+                    };
+
+                    const span = document.createElement('span');
+                    span.className = "text-gray-700";
+                    span.innerText = optText;
+
+                    label.appendChild(radio);
+                    label.appendChild(span);
+                    optionsDiv.appendChild(label);
+                });
+
+                questionDiv.appendChild(optionsDiv);
+                questionsContainer.appendChild(questionDiv);
+            });
+        }
+
+        function checkReadingAnswers() {
+            const data = gameLevels[currentLevelIndex];
+            const feedback = document.getElementById('reading-feedback');
+            
+            // Check if all questions are answered
+            if (Object.keys(readingAnswers).length < data.questions.length) {
+                feedback.innerText = "Please answer all questions. (ぜんぶ答えてください)";
+                feedback.className = "mt-4 text-lg font-bold h-8 transition-all text-center text-red-500 animate-shake block";
+                setTimeout(() => feedback.classList.remove('animate-shake'), 400);
+                return;
+            }
+
+            let allCorrect = true;
+
+            // Check each answer and provide visual feedback per question
+            data.questions.forEach((q, qIndex) => {
+                const container = document.getElementById(`q-container-${qIndex}`);
+                if (readingAnswers[qIndex] === q.correctAnswer) {
+                    container.classList.remove('border-red-400', 'bg-red-50');
+                    container.classList.add('border-green-400', 'bg-green-50');
+                } else {
+                    allCorrect = false;
+                    container.classList.remove('border-green-400', 'bg-green-50');
+                    container.classList.add('border-red-400', 'bg-red-50', 'animate-shake');
+                    setTimeout(() => container.classList.remove('animate-shake'), 400);
+                }
+            });
+
+            if (allCorrect) {
+                feedback.innerText = "Perfect! Great reading comprehension. (すばらしい)";
+                feedback.className = "mt-4 text-lg font-bold h-8 transition-all text-center text-green-600 block animate-correct rounded p-1";
+                
+                // Disable radios
+                document.querySelectorAll('input[type="radio"]').forEach(r => r.disabled = true);
+
+                document.getElementById('btn-check-reading').classList.add('hidden');
+                document.getElementById('btn-next-reading').classList.remove('hidden');
+            } else {
+                feedback.innerText = "Some answers are incorrect. Review the text and try again! (もう一度)";
+                feedback.className = "mt-4 text-lg font-bold h-8 transition-all text-center text-red-500 block";
+            }
+        }
+
+        // --- UTILS ---
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+    </script>
+</body>
+</html>
